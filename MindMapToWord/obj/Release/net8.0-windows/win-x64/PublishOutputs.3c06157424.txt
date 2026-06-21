@@ -1,0 +1,2 @@
+D:\trae\demo2\MindMapToWord\bin\Release\net8.0-windows\win-x64\publish\MindMapToWord.pdb
+D:\trae\demo2\MindMapToWord\bin\Release\net8.0-windows\win-x64\publish\MindMapToWord.exe
