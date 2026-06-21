@@ -1,13 +1,16 @@
 # MindMapToWord —— 思维导图转 Word 桌面程序
 
-一款 Windows 桌面应用（WinForms + .NET 6），可将主流思维导图格式一键转换为排版良好的 `.docx` 文件，**文字、图片、备注、超链接** 等内容均完整保留。
+一款 Windows 桌面应用（WinForms + .NET 8），可将主流思维导图格式一键转换为排版良好的 `.docx` 文件，**文字、图片、备注、超链接** 等内容均完整保留，并保持与导图一致的目录结构和节点顺序。
 
 ## ✨ 功能特色
 
 - **多格式支持**：XMind（`.xmind`）、MindMaster / 亿图脑图（`.emmx`）、FreeMind（`.mm`、`.mmap`）、OPML（`.opml`）、Markdown（`.md`）。
+- **Emmx 深度解析**：针对 MindMaster（`.emmx`）特有的 `page/page.xml` 结构，通过 `LevelData/Super V` 建立父子关系、`LevelData/SubLevel V` 按视觉顺序排序子节点，过滤连接线（MMConnector）。
 - **完整保留内容**：节点标题、备注/注释、超链接、节点内嵌图片（支持 PNG / JPEG / GIF / BMP / TIFF）。
-- **Word 结构化输出**：按导图层级自动映射到 Word 标题 1~4 + 正文，图片居中且自动等比缩放。
+- **Word 结构化输出**：按导图层级自动映射到 Word 标题 1~4 + 正文，图片居中且自动等比缩放，**目录结构与导图一致**。
+- **目录美观度优化**：**最后两层节点 + 大段文字（>50 字符）** 自动渲染为普通正文段落，不进入 Word 目录，提升文档美观度。
 - **离线运行**：Word 生成基于 OpenXML SDK，**无需安装 Microsoft Office**。
+- **树结构诊断**：内置节点层级诊断窗口，可查看节点 ID、坐标、排序、原始属性，便于排查解析问题。
 - **友好 UI**：文件选择 → 树状预览（显示节点数、图片数、链接等统计）→ 一键导出。
 
 ## 🚀 快速开始
@@ -15,13 +18,13 @@
 ### 环境要求
 
 - Windows 7 / 10 / 11
-- [.NET 6 SDK](https://dotnet.microsoft.com/download/dotnet/6.0) 或 [.NET 6 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/6.0)（运行已发布的可执行文件）
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) 或 [.NET 8 Desktop Runtime](https://dotnet.microsoft.com/download/dotnet/8.0)（运行已发布的可执行文件）
 
 ### 构建与运行
 
 ```powershell
-# 进入项目目录
-cd MindMapToWord
+# 进入解决方案目录
+cd d:\trae\demo2
 
 # 还原依赖（首次运行）
 dotnet restore
@@ -30,14 +33,14 @@ dotnet restore
 dotnet build -c Release
 
 # 直接运行
-dotnet run -c Release
+dotnet run -c Release --project MindMapToWord
 ```
 
 或发布为单文件可执行程序：
 
 ```powershell
-dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true
-# 输出路径: MindMapToWord\bin\Release\net6.0-windows\win-x64\publish\MindMapToWord.exe
+dotnet publish MindMapToWord -c Release -r win-x64 --self-contained false -p:PublishSingleFile=true
+# 输出路径: MindMapToWord\bin\Release\net8.0-windows\win-x64\publish\MindMapToWord.exe
 ```
 
 ### 使用步骤
@@ -52,31 +55,43 @@ dotnet publish -c Release -r win-x64 --self-contained false -p:PublishSingleFile
 ```
 MindMapToWord/
 ├── Program.cs                  // 程序入口
-├── MainForm.cs                 // 主窗口 UI（代码方式构建，无需 Designer）
-├── MindMapToWord.csproj        // 项目文件（.NET 6 - Windows）
+├── MainForm.cs                 // 主窗口 UI（包含树结构诊断对话框）
+├── MindMapToWord.csproj        // 项目文件（.NET 8 - Windows）
 ├── Core/
 │   ├── IMindMapParser.cs       // 解析器接口
-│   ├── MindMapModel.cs         // 统一的导图/节点/图片模型
+│   ├── MindMapModel.cs         // 统一的导图/节点/图片模型（含调试属性）
 │   └── MindMapParserFactory.cs // 按扩展名自动选择解析器
 ├── Parsers/
 │   ├── XMindParser.cs          // .xmind（ZIP + content.json/xml）
-│   ├── EmmxParser.cs           // .emmx 亿图脑图 / MindMaster
+│   ├── EmmxParser.cs           // .emmx 亿图脑图 / MindMaster（支持 LevelData 父子关系与 SubLevel 排序）
 │   ├── FreeMindParser.cs       // .mm / .mmap（XML）
 │   ├── OpmlParser.cs           // .opml
 │   └── MarkdownParser.cs       // .md 标题/列表结构
 └── Exporters/
-    └── WordExporter.cs         // 使用 OpenXML SDK 生成 .docx
+    └── WordExporter.cs         // 使用 OpenXML SDK 生成 .docx（支持叶子节点 + 长文本的正文段落优化）
 ```
 
 ## 🔧 技术栈
 
 | 组件 | 实现 |
 |------|------|
-| UI 框架 | WinForms + .NET 6 |
+| UI 框架 | WinForms + .NET 8 |
 | Word 生成 | [DocumentFormat.OpenXml](https://www.nuget.org/packages/DocumentFormat.OpenXml) 2.20 |
 | JSON 解析 | Newtonsoft.Json 13.0 |
 | ZIP 解包 | `System.IO.Compression`（内置于 .NET） |
 | 图片处理 | `System.Drawing`（仅用于读取尺寸信息） |
+| 目标框架 | `net8.0-windows` |
+
+## 🔄 版本更新记录
+
+### v1.0.0 — 近期更新
+
+- **框架升级**：目标框架从 `net6.0-windows` 升级至 `net8.0-windows`，修复编译兼容性问题。
+- **Emmx 解析增强**：重写 `EmmxParser`，支持 MindMaster `page/page.xml` 结构。通过 `LevelData/Super V` 建立正确的父子关系，通过 `LevelData/SubLevel V` 按视觉顺序排序子节点，过滤 `MMConnector` 连接线。
+- **目录结构修复**：确保 Word 目录层级与导图一致，节点顺序保持视觉顺序。
+- **目录美观度优化**：深度 ≥ 3 层的叶子节点，若标题 > 50 字符，自动渲染为正文段落（不进入 Word 目录）。
+- **树结构诊断**：新增节点层级诊断窗口，显示 `[层级]`、`children`、`order`、`X/Y` 坐标及原始属性，方便排查解析问题。
+- **OpenXML 兼容性修复**：改用 `CoreFilePropertiesPart`/`ExtendedFilePropertiesPart` 替代过时 API；`EnumValue<OnOffOnlyValues>` 显式转换。
 
 ## 📝 输出效果示例
 
