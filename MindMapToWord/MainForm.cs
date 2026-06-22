@@ -1,6 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Windows.Forms;
 using MindMapToWord.Core;
@@ -17,6 +19,7 @@ namespace MindMapToWord
         private readonly Label _lblFile = new() { Text = "（尚未选择文件）", AutoSize = false, Dock = DockStyle.Fill, Padding = new Padding(6, 8, 6, 8) };
         private readonly Button _btnPreview = new() { Text = "解析预览", Width = 110, Height = 36, Enabled = false };
         private readonly Button _btnExport = new() { Text = "导出为 Word", Width = 140, Height = 36, Enabled = false };
+        private readonly Button _btnBatchExport = new() { Text = "批量导出…", Width = 130, Height = 36, Enabled = false };
         private readonly Button _btnInspect = new() { Text = "🔍 查看内部结构", Width = 150, Height = 36, Enabled = false };
         private readonly CheckBox _chkNotes = new() { Text = "包含备注", Checked = true };
         private readonly CheckBox _chkLinks = new() { Text = "包含超链接", Checked = true };
@@ -27,6 +30,7 @@ namespace MindMapToWord
 
         private MindMapDocument? _currentDoc;
         private string _currentPath = string.Empty;
+        private readonly List<string> _selectedFiles = new();
 
         public MainForm()
         {
@@ -53,11 +57,13 @@ namespace MindMapToWord
             topLeft.Controls.Add(_btnOpen);
             _btnOpen.Dock = DockStyle.Fill;
 
-            var topRight = new Panel { Dock = DockStyle.Right, Width = 470 };
+            var topRight = new Panel { Dock = DockStyle.Right, Width = 580 };
             var topRightInner = new Panel { Dock = DockStyle.Fill };
+            topRightInner.Controls.Add(_btnBatchExport);
             topRightInner.Controls.Add(_btnExport);
             topRightInner.Controls.Add(_btnInspect);
             topRightInner.Controls.Add(_btnPreview);
+            _btnBatchExport.Dock = DockStyle.Right;
             _btnExport.Dock = DockStyle.Right;
             _btnInspect.Dock = DockStyle.Right;
             _btnPreview.Dock = DockStyle.Left;
@@ -101,6 +107,7 @@ namespace MindMapToWord
             _btnOpen.Click += BtnOpen_Click;
             _btnPreview.Click += BtnPreview_Click;
             _btnExport.Click += BtnExport_Click;
+            _btnBatchExport.Click += BtnBatchExport_Click;
             _btnInspect.Click += BtnInspect_Click;
         }
 
@@ -108,20 +115,36 @@ namespace MindMapToWord
         {
             using var dlg = new OpenFileDialog
             {
-                Title = "选择思维导图文件",
+                Title = "选择思维导图文件（可多选）",
                 Filter = MindMapParserFactory.SupportedFilter,
-                CheckFileExists = true
+                CheckFileExists = true,
+                Multiselect = true
             };
             if (dlg.ShowDialog(this) != DialogResult.OK) return;
 
-            _currentPath = dlg.FileName;
-            _lblFile.Text = _currentPath;
-            _btnPreview.Enabled = true;
-            _btnInspect.Enabled = true;
+            _selectedFiles.Clear();
+            _selectedFiles.AddRange(dlg.FileNames);
+
+            if (_selectedFiles.Count == 1)
+            {
+                _currentPath = _selectedFiles[0];
+                _lblFile.Text = _currentPath;
+                _btnPreview.Enabled = true;
+                _btnInspect.Enabled = true;
+            }
+            else
+            {
+                _currentPath = string.Empty;
+                _lblFile.Text = $"已选择 {_selectedFiles.Count} 个文件";
+                _btnPreview.Enabled = false;
+                _btnInspect.Enabled = false;
+            }
+
             _btnExport.Enabled = false;
+            _btnBatchExport.Enabled = _selectedFiles.Count > 0;
             _currentDoc = null;
             _tree.Nodes.Clear();
-            _statusLabel.Text = "已选择文件：" + Path.GetFileName(_currentPath);
+            _statusLabel.Text = $"已选择 {_selectedFiles.Count} 个文件，可点击「批量导出」直接转换。";
             UpdateStats();
         }
 
@@ -272,6 +295,133 @@ namespace MindMapToWord
                 MessageBox.Show("导出失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _statusLabel.Text = "导出失败：" + ex.Message;
             }
+        }
+
+        private void BtnBatchExport_Click(object? sender, EventArgs e)
+        {
+            if (_selectedFiles.Count == 0)
+            {
+                MessageBox.Show("请先选择文件。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            // 选择输出目录
+            using var folderDlg = new FolderBrowserDialog
+            {
+                Description = "请选择批量导出的输出目录"
+            };
+            if (folderDlg.ShowDialog(this) != DialogResult.OK) return;
+            var outputDir = folderDlg.SelectedPath;
+
+            // 验证输出目录可写
+            try
+            {
+                var testFile = Path.Combine(outputDir, "_test_write.tmp");
+                File.Create(testFile).Dispose();
+                File.Delete(testFile);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"无法写入目标目录：{ex.Message}\n\n请选择其他目录。", "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return;
+            }
+
+            // 创建进度对话框
+            using var progressForm = new BatchProgressForm(_selectedFiles.Count);
+            progressForm.Text = "批量导出进度";
+            progressForm.StartPosition = FormStartPosition.CenterParent;
+
+            var includeNotes = _chkNotes.Checked;
+            var includeLinks = _chkLinks.Checked;
+            var results = new List<(string file, bool success, string message)>();
+
+            // BackgroundWorker 完成批量转换
+            var worker = new BackgroundWorker();
+            worker.WorkerReportsProgress = true;
+            worker.DoWork += (_, args) =>
+            {
+                var files = (List<string>)args.Argument!;
+                for (int i = 0; i < files.Count; i++)
+                {
+                    var file = files[i];
+                    var fileName = Path.GetFileNameWithoutExtension(file);
+                    var outPath = Path.Combine(outputDir, fileName + ".docx");
+
+                    worker.ReportProgress(i + 1, fileName);
+
+                    try
+                    {
+                        var doc = MindMapParserFactory.Parse(file);
+                        var exporter = new WordExporter(outPath)
+                        {
+                            IncludeNotes = includeNotes,
+                            IncludeHyperlinks = includeLinks
+                        };
+                        exporter.Export(doc);
+                        results.Add((fileName, true, outPath));
+                    }
+                    catch (Exception ex)
+                    {
+                        results.Add((fileName, false, ex.Message));
+                    }
+                }
+                args.Result = results;
+            };
+
+            worker.ProgressChanged += (_, args) =>
+            {
+                progressForm.UpdateProgress(args.ProgressPercentage, (string)args.UserState!);
+            };
+
+            worker.RunWorkerCompleted += (_, args) =>
+            {
+                progressForm.Close();
+                var allResults = (List<(string, bool, string)>)args.Result!;
+                ShowBatchSummary(allResults);
+            };
+
+            progressForm.CancelRequested += (_, _) => worker.CancelAsync();
+
+            worker.RunWorkerAsync(_selectedFiles.ToList());
+            progressForm.ShowDialog(this);
+        }
+
+        private void ShowBatchSummary(List<(string file, bool success, string message)> results)
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"批量转换完成，共 {results.Count} 个文件：");
+            sb.AppendLine();
+
+            var successCount = results.Count(r => r.success);
+            var failCount = results.Count(r => !r.success);
+            sb.AppendLine($"✅ 成功：{successCount} 个");
+            sb.AppendLine($"❌ 失败：{failCount} 个");
+            sb.AppendLine();
+
+            if (failCount > 0)
+            {
+                sb.AppendLine("【失败文件】：");
+                foreach (var (file, success, message) in results)
+                {
+                    if (!success)
+                        sb.AppendLine($"  • {file}：{message}");
+                }
+                sb.AppendLine();
+            }
+
+            if (successCount > 0)
+            {
+                sb.AppendLine("【成功文件】：");
+                foreach (var (file, success, message) in results)
+                {
+                    if (success)
+                        sb.AppendLine($"  ✓ {file}");
+                }
+            }
+
+            MessageBox.Show(sb.ToString(), "批量导出结果",
+                MessageBoxButtons.OK, failCount > 0 ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+            _statusLabel.Text = $"批量导出完成：{successCount} 成功，{failCount} 失败。";
         }
 
         private void UpdateStats()
