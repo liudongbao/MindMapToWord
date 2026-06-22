@@ -1,5 +1,7 @@
 # MindMapToWord —— 思维导图转 Word 桌面程序
 
+**版本：v1.1.0**
+
 一款 Windows 桌面应用（WinForms + .NET 8），可将主流思维导图格式一键转换为排版良好的 `.docx` 文件，**文字、图片、备注、超链接** 等内容均完整保留，并保持与导图一致的目录结构和节点顺序。
 
 ## ✨ 功能特色
@@ -93,15 +95,42 @@ MindMapToWord/
 
 ## 🔄 版本更新记录
 
-### v1.0.0 — 近期更新
+### v1.1.0 — 阶段版本 1（2026-06-22）
 
-- **框架升级**：目标框架从 `net6.0-windows` 升级至 `net8.0-windows`，修复编译兼容性问题。
-- **Emmx 解析增强**：重写 `EmmxParser`，支持 MindMaster `page/page.xml` 结构。通过 `LevelData/Super V` 建立正确的父子关系，通过 `LevelData/SubLevel V` 按视觉顺序排序子节点，过滤 `MMConnector` 连接线。
-- **目录结构修复**：确保 Word 目录层级与导图一致，节点顺序保持视觉顺序。
-- **目录美观度优化**：深度 ≥ 3 层的叶子节点，若标题 > 50 字符，自动渲染为正文段落（不进入 Word 目录）。
-- **树结构诊断**：新增节点层级诊断窗口，显示 `[层级]`、`children`、`order`、`X/Y` 坐标及原始属性，方便排查解析问题。
-- **OpenXML 兼容性修复**：改用 `CoreFilePropertiesPart`/`ExtendedFilePropertiesPart` 替代过时 API；`EnumValue<OnOffOnlyValues>` 显式转换。
-- **批量导出功能**：支持一次选择多个文件批量转换，使用 `BackgroundWorker` 在后台线程执行，实时进度条显示，输出目录可写性预验证，单个文件失败不影响其余文件，完成后显示汇总结果。
+#### 新增功能
+
+- **批量导出**：支持一次选择多个思维导图文件，批量转换为 Word。
+- **进度条显示**：实时显示当前处理的文件名和进度条。
+- **错误隔离**：单个文件转换失败不影响其余文件，完成后显示汇总结果窗口。
+- **帮助说明**：内置完整的用户帮助文档，包含快速入门、支持格式、常见问题三个标签页。
+- **构建脚本**：提供 `build.bat` 脚本，支持一键编译和发布，编译完成后自动启动单文件版本。
+- **两种发布包**：普通版和单文件版（`_Single.exe`），方便不同场景使用。
+
+#### 功能完善
+
+- **Emmx 解析增强**：通过 `LevelData/Super V` 建立正确的父子关系，通过 `LevelData/SubLevel V` 按视觉顺序排序子节点。
+- **目录美观度优化**：深度 ≥ 3 层的叶子节点，若标题 > 50 字符，自动渲染为正文段落，不进入 Word 目录。
+- **树结构诊断**：内置节点层级诊断窗口，显示节点 ID、坐标、排序及原始属性。
+- **输出目录验证**：批量导出前验证目标目录可写性，避免权限问题。
+- **UI 优化**：帮助按钮位于窗口顶部按钮栏最右侧，帮助文档使用分隔线优化排版。
+
+#### 技术改进
+
+- **框架升级**：从 `net6.0-windows` 升级至 `net8.0-windows`。
+- **OpenXML 兼容性修复**：改用 `CoreFilePropertiesPart`/`ExtendedFilePropertiesPart`，`EnumValue<OnOffOnlyValues>` 显式转换。
+- **命名冲突解决**：为 `DocumentFormat.OpenXml.Wordprocessing.Color` 添加 `WPColor` 别名。
+
+#### Bug 修复
+
+- 修复 `Access to the path is denied` 权限问题。
+- 修复导出 Word 无目录结构的问题。
+- 修复导出 Word 目录顺序与导图不一致的问题。
+- 修复帮助说明中文乱码问题。
+
+### v1.0.0 — 初始版本
+
+- 完成基础框架搭建，支持 XMind、Emmx、FreeMind、OPML、Markdown 等格式解析。
+- 实现基于 OpenXML SDK 的 Word 文档生成。
 
 ## 📝 输出效果示例
 

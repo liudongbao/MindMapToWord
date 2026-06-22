@@ -21,6 +21,7 @@ namespace MindMapToWord
         private readonly Button _btnExport = new() { Text = "导出为 Word", Width = 140, Height = 36, Enabled = false };
         private readonly Button _btnBatchExport = new() { Text = "批量导出…", Width = 130, Height = 36, Enabled = false };
         private readonly Button _btnInspect = new() { Text = "🔍 查看内部结构", Width = 150, Height = 36, Enabled = false };
+        private readonly Button _btnHelp = new() { Text = "❓ 帮助", Width = 80, Height = 36 };
         private readonly CheckBox _chkNotes = new() { Text = "包含备注", Checked = true };
         private readonly CheckBox _chkLinks = new() { Text = "包含超链接", Checked = true };
         private readonly Label _lblStats = new() { AutoSize = true };
@@ -57,16 +58,19 @@ namespace MindMapToWord
             topLeft.Controls.Add(_btnOpen);
             _btnOpen.Dock = DockStyle.Fill;
 
-            var topRight = new Panel { Dock = DockStyle.Right, Width = 580 };
+            var topRight = new Panel { Dock = DockStyle.Right, Width = 640 };
             var topRightInner = new Panel { Dock = DockStyle.Fill };
+            topRightInner.Controls.Add(_btnHelp);
             topRightInner.Controls.Add(_btnBatchExport);
             topRightInner.Controls.Add(_btnExport);
             topRightInner.Controls.Add(_btnInspect);
             topRightInner.Controls.Add(_btnPreview);
+            _btnHelp.Dock = DockStyle.Right;
             _btnBatchExport.Dock = DockStyle.Right;
             _btnExport.Dock = DockStyle.Right;
             _btnInspect.Dock = DockStyle.Right;
             _btnPreview.Dock = DockStyle.Left;
+            _btnHelp.Width = 60;
             topRight.Controls.Add(topRightInner);
 
             top.Controls.Add(topMid);    // 先加 Fill
@@ -109,6 +113,7 @@ namespace MindMapToWord
             _btnExport.Click += BtnExport_Click;
             _btnBatchExport.Click += BtnBatchExport_Click;
             _btnInspect.Click += BtnInspect_Click;
+            _btnHelp.Click += BtnHelp_Click;
         }
 
         private void BtnOpen_Click(object? sender, EventArgs e)
@@ -587,6 +592,167 @@ namespace MindMapToWord
                 MessageBox.Show("探查失败：" + ex.Message, "错误", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 _statusLabel.Text = "探查失败：" + ex.Message;
             }
+        }
+
+        private void BtnHelp_Click(object? sender, EventArgs e)
+        {
+            var helpForm = new Form
+            {
+                Text = "帮助说明",
+                Width = 750,
+                Height = 550,
+                StartPosition = FormStartPosition.CenterParent,
+                Font = new Font("微软雅黑", 9f)
+            };
+
+            var tabControl = new TabControl { Dock = DockStyle.Fill };
+
+            // 快速入门标签
+            var tabQuickStart = new TabPage("快速入门");
+            var quickStartText = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                Font = new Font("微软雅黑", 10f),
+                BorderStyle = BorderStyle.None,
+                BackColor = System.Drawing.Color.White,
+                WordWrap = true
+            };
+            quickStartText.Text = @"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+                        MindMapToWord v1.1.0
+                     思维导图转 Word 桌面工具
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+一、单文件转换
+─────────────────────────────────────────────────────────────
+
+  1. 点击【选择导图文件…】按钮，选择本地的思维导图文件。
+     支持格式：.xmind、.emmx、.mm、.opml、.md
+
+  2. 点击【解析预览】按钮，在左侧树状视图中查看导图结构。
+
+  3. 勾选【包含备注】和【包含超链接】选项，决定是否导出这些内容。
+
+  4. 点击【导出为 Word】按钮，选择保存位置，生成 .docx 文件。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+二、批量转换
+─────────────────────────────────────────────────────────────
+
+  1. 在【选择导图文件…】对话框中，按住 Ctrl 或 Shift 键选择多个文件。
+
+  2. 点击【批量导出…】按钮，选择输出目录。
+
+  3. 进度窗口会实时显示当前处理的文件名和进度条。
+
+  4. 转换完成后，会弹出汇总结果窗口，显示成功和失败的文件列表。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+三、提示
+─────────────────────────────────────────────────────────────
+
+  • 导出的 Word 文件会保持与原图一致的目录结构和节点顺序。
+
+  • 深度 ≥ 3 层的叶子节点，若标题超过 50 字符，会自动渲染为正文段落，不进入目录。
+
+  • 如果遇到权限问题，请尝试选择其他输出目录或以管理员身份运行程序。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            tabQuickStart.Controls.Add(quickStartText);
+            tabControl.TabPages.Add(tabQuickStart);
+
+            // 支持格式标签
+            var tabFormats = new TabPage("支持格式");
+            var formatsText = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                Font = new Font("微软雅黑", 10f),
+                BorderStyle = BorderStyle.None,
+                BackColor = System.Drawing.Color.White,
+                WordWrap = true
+            };
+            formatsText.Text = @"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+思维导图格式
+─────────────────────────────────────────────────────────────
+
+  • .xmind   → XMind 格式（ZIP 压缩包）
+
+  • .emmx    → MindMaster / 亿图脑图格式
+
+  • .mm/.mmap → FreeMind 格式
+
+  • .opml    → OPML 大纲格式
+
+  • .md      → Markdown 格式（标题和列表结构）
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+图片格式
+─────────────────────────────────────────────────────────────
+
+  • PNG、JPEG、GIF、BMP、TIFF
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            tabFormats.Controls.Add(formatsText);
+            tabControl.TabPages.Add(tabFormats);
+
+            // 常见问题标签
+            var tabFAQ = new TabPage("常见问题");
+            var faqText = new RichTextBox
+            {
+                Dock = DockStyle.Fill,
+                ReadOnly = true,
+                Font = new Font("微软雅黑", 10f),
+                BorderStyle = BorderStyle.None,
+                BackColor = System.Drawing.Color.White,
+                WordWrap = true
+            };
+            faqText.Text = @"━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q1: 导出的 Word 无法打开？
+─────────────────────────────────────────────────────────────
+A: 请确保使用的是 .docx 格式（Office 2007+）。本程序仅生成 OpenXML 格式，不生成旧版 .doc。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q2: 图片没有显示？
+─────────────────────────────────────────────────────────────
+A: 某些导图格式的图片存储在外部本地路径。请确保原始导图及其附带的资源文件未被移动或删除。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q3: 导出失败，提示权限被拒绝？
+─────────────────────────────────────────────────────────────
+A: 请尝试选择其他输出目录（如桌面、文档文件夹），或右键程序以管理员身份运行。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q4: 支持中文文件名吗？
+─────────────────────────────────────────────────────────────
+A: 支持。所有路径、文件名、文本内容均使用 UTF-8 编码处理。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q5: 目录结构与原图不一致？
+─────────────────────────────────────────────────────────────
+A: 对于 .emmx 格式，程序会通过 LevelData/Super V 属性建立父子关系，确保目录结构正确。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Q6: 为什么有些长文本没有出现在目录中？
+─────────────────────────────────────────────────────────────
+A: 深度 ≥ 3 层的叶子节点，若标题超过 50 字符，会自动渲染为正文段落，不进入 Word 目录。
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━";
+            tabFAQ.Controls.Add(faqText);
+            tabControl.TabPages.Add(tabFAQ);
+
+            helpForm.Controls.Add(tabControl);
+            helpForm.ShowDialog(this);
         }
 
         private static int CountWord(string text, string word)
