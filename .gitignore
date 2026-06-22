@@ -1,3 +1,4 @@
+# Build outputs
 bin/
 obj/
 *.suo
@@ -28,4 +29,6 @@ ServiceFabricBackup/
 *.ndf
 *.docstates
 *.pfx
-publish/
+
+# But allow single file release in publish directory
+!MindMapToWord/bin/Release/net8.0-windows/win-x64/publish/MindMapToWord_Single.exe
